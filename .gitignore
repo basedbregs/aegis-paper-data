@@ -1,0 +1,13 @@
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore logs
+*.log
+logs/
+
+# Keep all device data and aggregated files
+!devices/
+!aggregated/
+!README.md
+!LICENSE

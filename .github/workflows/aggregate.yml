@@ -1,0 +1,113 @@
+name: Aggregate Device Data
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Aggregate Data
+        run: |
+          mkdir -p aggregated
+          
+          # Combine all device trades
+          echo "[]" > /tmp/all_trades.json
+          
+          # Process each device's trades
+          for device_dir in devices/*/; do
+            device=$(basename "$device_dir")
+            trade_file="${device_dir}trades_2025.jsonl"
+            
+            if [ -f "$trade_file" ]; then
+              echo "Processing $device..."
+              # Parse JSONL and add to array
+              while IFS= read -r line || [ -n "$line" ]; do
+                if [ -n "$line" ]; then
+                  echo "$line" >> /tmp/all_trades.jsonl
+                fi
+              done < "$trade_file"
+            fi
+          done
+          
+          # Sort by timestamp and remove duplicates
+          if [ -f /tmp/all_trades.jsonl ]; then
+            cat /tmp/all_trades.jsonl | sort -t'_' -k2 -n -u > aggregated/all_trades.jsonl
+            echo "Total trades: $(wc -l < aggregated/all_trades.jsonl)"
+          else
+            echo "[]" > aggregated/all_trades.jsonl
+          fi
+      
+      - name: Generate Summary
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+          
+          const tradesFile = 'aggregated/all_trades.jsonl';
+          if (!fs.existsSync(tradesFile)) {
+            fs.writeFileSync('aggregated/summary.json', JSON.stringify({
+              generatedAt: new Date().toISOString(),
+              totalTrades: 0,
+              devices: {},
+              overallPnl: 0
+            }, null, 2));
+            process.exit(0);
+          }
+          
+          const lines = fs.readFileSync(tradesFile, 'utf8')
+            .split('\n')
+            .filter(l => l.trim());
+          
+          const trades = lines.map(l => {
+            try { return JSON.parse(l); } catch { return null; }
+          }).filter(Boolean);
+          
+          // Stats by device
+          const deviceStats = {};
+          trades.forEach(t => {
+            const d = t.deviceId || 'unknown';
+            if (!deviceStats[d]) {
+              deviceStats[d] = { trades: 0, pnl: 0, open: 0, closed: 0 };
+            }
+            deviceStats[d].trades++;
+            deviceStats[d].pnl += t.pnl || 0;
+            if (t.status === 'OPEN') deviceStats[d].open++;
+            else deviceStats[d].closed++;
+          });
+          
+          const summary = {
+            generatedAt: new Date().toISOString(),
+            totalTrades: trades.length,
+            devices: deviceStats,
+            overallPnl: trades.reduce((sum, t) => sum + (t.pnl || 0), 0)
+          };
+          
+          fs.writeFileSync('aggregated/summary.json', JSON.stringify(summary, null, 2));
+          console.log('Summary generated:', summary);
+          EOF
+      
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          git add aggregated/
+          git diff --staged --quiet || git commit -m "Auto-aggregate: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push || echo "Nothing to push"
