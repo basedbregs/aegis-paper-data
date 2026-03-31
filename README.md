@@ -4,7 +4,7 @@ Multi-device aggregation for Project Aegis paper trading.
 
 ## Devices
 
-- **laptopclaw** - Portable trading (MacBook)
+- **laptopclaw** - Portable trading (Windows)
 - **ratclaw** - Workstation
 - **tokyovps** - Vultr Tokyo VPS (Project Aegis execution)
 
