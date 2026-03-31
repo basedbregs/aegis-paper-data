@@ -1,8 +1,14 @@
 {
-  "generatedAt": "2026-03-31T04:54:44.046Z",
-  "totalTrades": 1,
+  "generatedAt": "2026-03-31T05:05:59.078Z",
+  "totalTrades": 2,
   "devices": {
     "ratclaw": {
+      "trades": 1,
+      "pnl": 0,
+      "open": 1,
+      "closed": 0
+    },
+    "tokyovps": {
       "trades": 1,
       "pnl": 0,
       "open": 1,
