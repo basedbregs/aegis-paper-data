@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-31T04:54:06.777Z",
+  "generatedAt": "2026-03-31T04:54:44.046Z",
   "totalTrades": 1,
   "devices": {
-    "unknown": {
+    "ratclaw": {
       "trades": 1,
       "pnl": 0,
-      "open": 0,
-      "closed": 1
+      "open": 1,
+      "closed": 0
     }
   },
   "overallPnl": 0
